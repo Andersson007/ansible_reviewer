@@ -22,9 +22,9 @@ def check_cli_args(arg_list):
 def get_sections_to_check(module_path):
     """Read a module file and extracts section to check"""
 
-    DOCUMENTATION = []
-    EXAMPLES = []
-    RETURN = []
+    documentation = []
+    examples = []
+    returns = []
 
     is_in_doc_section = False
     is_in_examples_section = False
@@ -45,56 +45,82 @@ def get_sections_to_check(module_path):
 
                 continue
 
-            # Start to extract the DOCUMENTATION section
+            # Start to extract the documentation section
             if 'DOCUMENTATION' in line:
                 is_in_doc_section = True
                 continue
 
-            # Start to extract the EXAMPLES section
+            # Start to extract the examples section
             elif 'EXAMPLES' in line:
                 is_in_examples_section = True
                 continue
 
-            # Start to extract the RETURN section
+            # Start to extract the return section
             elif 'RETURN' in line:
                 is_in_return_section = True
                 continue
 
             # Put the line in an appropriate list
             if is_in_doc_section:
-                DOCUMENTATION.append(line)
+                documentation.append(line)
 
             elif is_in_examples_section:
-                EXAMPLES.append(line)
+                examples.append(line)
 
             elif is_in_return_section:
-                RETURN.append(line)
+                returns.append(line)
 
-    if DOCUMENTATION:
-        DOCUMENTATION = ''.join(DOCUMENTATION)
+    if documentation:
+        documentation = ''.join(documentation)
 
-    if EXAMPLES:
-        EXAMPLES = ''.join(EXAMPLES)
+    if examples:
+        examples = ''.join(examples)
 
-    if RETURN:
-        RETURN = ''.join(RETURN)
+    if returns:
+        returns = ''.join(returns)
 
     try:
-        DOCUMENTATION = load(DOCUMENTATION)
+        documentation = load(documentation)
     except AttributeError:
         pass
 
     try:
-        EXAMPLES = load(EXAMPLES)
+        examples = load(examples)
     except AttributeError:
         pass
 
     try:
-        RETURN = load(RETURN)
+        returns = load(returns)
     except AttributeError:
         pass
 
-    return DOCUMENTATION, EXAMPLES, RETURN
+    return documentation, examples, returns
+
+
+def check_doc_section(doc, report):
+    """Check the documentation section"""
+
+    # If there is no the documentation block, exit
+    if not doc:
+        raise AttributeError('"DOCUMENTATION" section is not provided, '
+                             'nothing to parse, exit')
+
+    # Check if short_description starts with a capital letter
+    # and does not end with a dot
+    if not doc['short_description'][0].isupper():
+        report.append('short_description: does not start with a capital letter')
+
+    if doc['short_description'][-1] =='.':
+        report.append('short_description: ends with a dot')
+
+    # Check if every line of description starts with a capital letter
+    # and ends with a dot
+    for n, line in enumerate(doc['description']):
+        if not line[0].isupper():
+            report.append('description: line %s does not start with a capital letter' % (n + 1))
+
+        if line[-1] != '.':
+            report.append('description: line %s does not end with a dot' % (n + 1))
 
 
 def main():
@@ -103,12 +129,17 @@ def main():
     check_cli_args(sys.argv)
 
     # Extract sections
-    DOCUMENTATION, EXAMPLES, RETURN = get_sections_to_check(sys.argv[1])
+    documentation, examples, returns = get_sections_to_check(sys.argv[1])
 
-    # If there is no DOCUMENTATION block, exit
-    if not DOCUMENTATION:
-        raise AttributeError('"DOCUMENTATION" section is not provided, '
-                             'nothing to parse, exit')
+    # Create a report object
+    report = []
+
+    # Check the documentation section
+    check_doc_section(documentation, report)
+
+    # TODO: Debug
+    for line in report:
+        print(line)
 
 
 if __name__ == '__main__':
