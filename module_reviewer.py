@@ -8,6 +8,8 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
+from yaml import load
+
 
 def check_cli_args(arg_list):
     """Checks CLI arguments"""
@@ -17,33 +19,78 @@ def check_cli_args(arg_list):
         raise Exception('At least one argument (file name) is required. Exit')
 
 
-def get_sections_to_check(module_name):
-    """Loads a module by name and extracts section to check"""
-    # Load the passed module,
-    # it must be in the same directory.
-    # Modules names cannot contain extensions,
-    # so we must cut it off.
-    # The module file must be in the current directory.
-    # It can be passed with or without an extension
-    module = module_name.split('.')[0] if '.' in module_name else module_name
-    module = __import__(module)
+def get_sections_to_check(module_path):
+    """Read a module file and extracts section to check"""
 
-    DOCUMENTATION = None
-    EXAMPLES = None
-    RETURN = None
+    DOCUMENTATION = []
+    EXAMPLES = []
+    RETURN = []
+
+    is_in_doc_section = False
+    is_in_examples_section = False
+    is_in_return_section = False
+
+    with open(module_path, 'r') as f:
+        for line in f:
+            # End of thesection has been reached
+            if line in ('"""\n', "'''\n"):
+                if is_in_doc_section:
+                    is_in_doc_section = False
+
+                elif is_in_examples_section:
+                    is_in_examples_section = False
+
+                elif is_in_return_section:
+                    is_in_return_section = False
+
+                continue
+
+            # Start to extract the DOCUMENTATION section
+            if 'DOCUMENTATION' in line:
+                is_in_doc_section = True
+                continue
+
+            # Start to extract the EXAMPLES section
+            elif 'EXAMPLES' in line:
+                is_in_examples_section = True
+                continue
+
+            # Start to extract the RETURN section
+            elif 'RETURN' in line:
+                is_in_return_section = True
+                continue
+
+            # Put the line in an appropriate list
+            if is_in_doc_section:
+                DOCUMENTATION.append(line)
+
+            elif is_in_examples_section:
+                EXAMPLES.append(line)
+
+            elif is_in_return_section:
+                RETURN.append(line)
+
+    if DOCUMENTATION:
+        DOCUMENTATION = ''.join(DOCUMENTATION)
+
+    if EXAMPLES:
+        EXAMPLES = ''.join(EXAMPLES)
+
+    if RETURN:
+        RETURN = ''.join(RETURN)
 
     try:
-        DOCUMENTATION = module.DOCUMENTATION
+        DOCUMENTATION = load(DOCUMENTATION)
     except AttributeError:
         pass
 
     try:
-        EXAMPLES = module.EXAMPLES
+        EXAMPLES = load(EXAMPLES)
     except AttributeError:
         pass
 
     try:
-        RETURN = module.RETURN
+        RETURN = load(RETURN)
     except AttributeError:
         pass
 
@@ -58,8 +105,8 @@ def main():
     # Extract sections
     DOCUMENTATION, EXAMPLES, RETURN = get_sections_to_check(sys.argv[1])
 
-    # If there is no DOCUMENTATION block, exit 
-    if DOCUMENTATION is None:
+    # If there is no DOCUMENTATION block, exit
+    if not DOCUMENTATION:
         raise AttributeError('"DOCUMENTATION" section is not provided, '
                              'nothing to parse, exit')
 
