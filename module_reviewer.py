@@ -162,6 +162,12 @@ def needs_marker(string, pattern, marker):
         if string[marker_check_pos] != marker:
             return True
 
+        if not line[0].isupper():
+            report.append('description: line %s does not start with a capital letter' % (n + 1))
+
+        if line[-1] != '.':
+            report.append('description: line %s does not end with a dot' % (n + 1))
+
     return False
 
 
