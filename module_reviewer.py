@@ -116,8 +116,8 @@ def check_doc_section(doc, report):
 
 
 def check_doc_options(options, report):
-    for opt_name in options:
-        pass
+    for opt_name, content in options.items():
+        check_descr(content['description'], report, 'opt %s' % opt_name)
 
 
 def check_descr(description, report, d_type):
