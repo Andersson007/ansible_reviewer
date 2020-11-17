@@ -108,18 +108,32 @@ def check_doc_section(doc, report):
         raise AttributeError('"DOCUMENTATION" section is not provided, '
                              'nothing to parse, exit')
 
+    check_doc_short_descr(doc['short_description'], report)
+
+    check_doc_long_descr(doc['description'], report)
+
+    check_doc_options(doc['options'], report)
+
+
+def check_doc_options(options, report):
+    pass
+
+
+def check_doc_short_descr(short_description, report):
     # Check if short_description starts with a capital letter
     # and does not end with a dot
-    if not doc['short_description'][0].isupper():
+    if not short_description[0].isupper():
         report.append("module's short_description: does not start "
                       "with a capital letter")
 
-    if doc['short_description'][-1] == '.':
+    if short_description[-1] == '.':
         report.append("module's short_description: ends with a dot")
 
+
+def check_doc_long_descr(description, report):
     # Check if every line of description starts with a capital letter
     # and ends with a dot
-    for n, line in enumerate(doc['description']):
+    for n, line in enumerate(description):
         # Starts with uppercase?
         if not line[0].isupper():
             report.append("module's description: line %s does not start "
@@ -161,12 +175,6 @@ def needs_marker(string, pattern, marker):
         marker_check_pos = pattern_start_pos - 2
         if string[marker_check_pos] != marker:
             return True
-
-        if not line[0].isupper():
-            report.append('description: line %s does not start with a capital letter' % (n + 1))
-
-        if line[-1] != '.':
-            report.append('description: line %s does not end with a dot' % (n + 1))
 
     return False
 
