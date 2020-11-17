@@ -108,53 +108,47 @@ def check_doc_section(doc, report):
         raise AttributeError('"DOCUMENTATION" section is not provided, '
                              'nothing to parse, exit')
 
-    check_doc_short_descr(doc['short_description'], report)
+    check_descr([doc['short_description'], ], report, 'short_description')
 
-    check_doc_long_descr(doc['description'], report)
+    check_descr(doc['description'], report, 'description')
 
     check_doc_options(doc['options'], report)
 
 
 def check_doc_options(options, report):
-    pass
+    for opt_name in options:
+        pass
 
 
-def check_doc_short_descr(short_description, report):
-    # Check if short_description starts with a capital letter
-    # and does not end with a dot
-    if not short_description[0].isupper():
-        report.append("module's short_description: does not start "
-                      "with a capital letter")
-
-    if short_description[-1] == '.':
-        report.append("module's short_description: ends with a dot")
-
-
-def check_doc_long_descr(description, report):
+def check_descr(description, report, d_type):
     # Check if every line of description starts with a capital letter
     # and ends with a dot
     for n, line in enumerate(description):
         # Starts with uppercase?
         if not line[0].isupper():
-            report.append("module's description: line %s does not start "
-                          "with a capital letter" % (n + 1))
+            report.append("%s: line %s does not start "
+                          "with a capital letter" % (d_type, n + 1))
 
         # Ends with a dot?
-        if line[-1] != '.':
-            report.append("module's description: line %s does not "
-                          "end with a dot" % (n + 1))
+        if line[-1] != '.' and d_type != 'short_description':
+            report.append("%s: line %s does not "
+                          "end with a dot" % (d_type, n + 1))
+
+        if line[-1] == '.' and d_type == 'short_description':
+            report.append("%s: line %s "
+                          "ends with a dot" % (d_type, n + 1))
 
         # Uses a marker with http?
         if needs_marker(line, 'http', 'U'):
-            report.append("module's description: has URLs "
-                          "used without U() marker")
+            report.append("%s: has URLs "
+                          "used without U() marker" % d_type)
 
         # Check length
         line_len = len(line)
         if line_len > LINE_MAX_LEN:
-            report.append("module's description: line %s is %s characters "
-                          "long which is longer than %s. Would not be better "
-                          "to split them?" % (n, line_len, LINE_MAX_LEN))
+            report.append("%s: line %s contains %s characters "
+                          "which is longer than %s. Would not be better to "
+                          "split them?" % (d_type, n, line_len, LINE_MAX_LEN))
 
 
 def needs_marker(string, pattern, marker):
