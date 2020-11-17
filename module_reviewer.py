@@ -119,6 +119,11 @@ def check_doc_options(options, report):
     for opt_name, content in options.items():
         check_descr(content['description'], report, 'opt %s' % opt_name)
 
+        # We do not need to declare "required: false" explicitly
+        if 'required' in content and not content['required']:
+            report.append('opt %s: explicit "require: false" '
+                          'declaration' % opt_name)
+
 
 def check_descr(description, report, d_type):
     # Check if every line of description starts with a capital letter
@@ -146,9 +151,8 @@ def check_descr(description, report, d_type):
         # Check length
         line_len = len(line)
         if line_len > LINE_MAX_LEN:
-            report.append("%s: line %s contains %s characters "
-                          "which is longer than %s. Would not be better to "
-                          "split them?" % (d_type, n, line_len, LINE_MAX_LEN))
+            report.append("%s: line %s contains %s characters which seems "
+                          "to be too long" % (d_type, n, line_len))
 
 
 def needs_marker(string, pattern, marker):
