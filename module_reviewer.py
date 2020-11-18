@@ -177,6 +177,28 @@ def needs_marker(string, pattern, marker):
     return False
 
 
+def check_examples_section(examples, report, fqcn=None):
+    for n, ex in enumerate(examples):
+        if 'name' not in ex:
+            report.append('examples: #%s without using "name"' % (n + 1))
+
+        else:
+            if not ex['name'][0].isupper():
+                report.append('examples: "- name" of #%s does not start '
+                              'with a capital letter' % (n + 1))
+
+            if ex['name'][-1] == '.':
+                report.append('examples: "- name" of #%s '
+                              'ends with a dot' % (n + 1))
+
+        if fqcn and fqcn not in ex:
+            report.append("examples: #%s there is "
+                          "no FQCN %s" % (n + 1, fqcn))
+
+        elif '.' not in ex:
+            report.append('examples: #%s no FQCN' % (n + 1))
+
+
 def main():
 
     # Check CLI arguments
@@ -190,6 +212,9 @@ def main():
 
     # Check the documentation section
     check_doc_section(documentation, report)
+
+    # Check the examples section
+    check_examples_section(examples, report)
 
     # TODO: Debug
     for line in report:
