@@ -114,6 +114,28 @@ def check_doc_section(doc, report):
 
     check_doc_options(doc['options'], report)
 
+    if doc.get('notes'):
+        if isinstance(doc['notes'], str):
+            doc['notes'] = [doc['notes'], ]
+
+        check_descr(doc['notes'], report, 'notes')
+
+        check_mode_mentioned(doc['notes'], report, 'notes')
+
+    else:
+        report.append('no "notes" section, it should, at least, contain '
+                      'info about check_mode support')
+
+
+def check_mode_mentioned(str_list, report, d_type):
+    mentioned = False
+    for line in str_list:
+        if 'check_mode' in line.lower() or 'check mode' in line.lower():
+            mentioned = True
+
+    if not mentioned:
+        report.append('%s: check_mode support is not mentioned' % d_type)
+
 
 def check_doc_options(options, report):
     for opt_name, content in options.items():
