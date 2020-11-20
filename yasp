@@ -323,7 +323,11 @@ class YaSpellParser(object):
 def main():
     parser = YaSpellParser()
 
-    if args.filename:
+    if sys.stdin:
+        for line in sys.stdin:
+            print(line)
+
+    elif args.filename:
         parser.parse_file(args.filename)
 
     elif args.directory:
