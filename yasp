@@ -1,0 +1,340 @@
+#!/usr/bin/env python3
+# yasp - Search typos in files and
+# websites by using Yandex.Speller API
+#
+# Author: Andrey Klychkov <aakychkov@mail.ru>
+# Date: 30-10-2020
+#
+# IMPORTANT:
+# 1. Max request length is 10000 characters
+# 2. Yandex allows no more than 10000 requests per day
+# https://yandex.ru/legal/speller_api/
+
+import argparse
+import datetime
+import json
+import os
+import sys
+import urllib.request as url
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError as e:
+    print(e, "Hint: use pip3 install beautifulsoup4 html5lib lxml")
+    sys.exit(1)
+
+
+__VERSION__ = '0.7.0'
+
+
+def parse_cli_args():
+    parser = argparse.ArgumentParser(description="Search "
+                                     "typos in files and websites "
+                                     "by using Yandex.Speller API")
+
+    parser.add_argument("-r", "--recursive",
+                        dest="recursive",
+                        action="store_true",
+                        required=False,
+                        help="search recursively")
+
+    parser.add_argument("-s", "--stat",
+                        dest="print_stat",
+                        action="store_true",
+                        required=False,
+                        help="print statistics")
+
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument("-f", "--file",
+                       dest="filename",
+                       metavar="FILE",
+                       default=False,
+                       required=False,
+                       help="path to a FILE")
+
+    group.add_argument("-d", "--dir",
+                       dest="directory",
+                       metavar="DIR",
+                       default=False,
+                       required=False,
+                       help="path to a DIR")
+
+    group.add_argument("-u", "--url",
+                       dest="html",
+                       metavar="URL",
+                       default=False,
+                       required=False,
+                       help="path to a web page (in progress)")
+
+    group.add_argument("--version",
+                       action="version",
+                       version=__VERSION__,
+                       help="show version and exit")
+
+    return parser.parse_args()
+
+
+args = parse_cli_args()
+
+
+def is_binary(fname):
+    # TODO: Add exception handling and checks
+    READ_BYTES = 512
+    fp = None
+    try:
+        fp = open(fname, 'r')
+    except Exception as e:
+        if fp:
+            fp.close()
+        print(e)
+        sys.stderr.write('my exception handling here')
+        sys.exit(1)
+
+    try:
+        f_data = fp.read(READ_BYTES)
+    except UnicodeDecodeError:
+        fp.close()
+        return True
+
+    if '\x00' in f_data:
+        fp.close()
+        return True
+
+    return False
+
+
+class FileList():
+    def __init__(self, path):
+        self.path = path
+        self.file_list = []
+
+    def get(self, recursive=False):
+        if not recursive:
+            if os.path.isdir(self.path):
+                for i in os.listdir(self.path):
+                    i = self.path+'/'+i
+                    if os.path.isfile(i):
+                        self.file_list.append(i)
+            else:
+                sys.stderr.write('%s is not a directory\n' % self.path)
+                sys.exit(1)
+
+        else:
+            try:
+                for root, dirs, files in os.walk(self.path):
+                    for f in files:
+                        self.file_list.append(os.path.join(root, f))
+
+            except Exception:
+                # TODO: Exception handling here
+                pass
+
+        return self.file_list
+
+
+class YaSpellParser(object):
+    def __init__(self):
+        self.start_time = datetime.datetime.now()
+        self.BASE_URL = 'https://speller.yandex.net/services'\
+                        '/spellservice.json/checkTexts?text='
+        self.MAX_REQ_LEN = 10000 - len(self.BASE_URL)
+        self.MAX_REQ_PER_DAY = 10000
+        self.MIN_WORD_LEN = 3
+        self.word_dict = {}
+        self.file_list = []
+        self.line_num = 0
+        self.sent = False
+        self.stat = {'max_fact_req_len': 0,
+                     'total_requests': 0,
+                     'total_lines': 0,
+                     'total_uniq_words': 0,
+                     'total_word_num': 0,
+                     'parsed_word_num': 0,
+                     'word_in_dict': 0,
+                     'words_len': 0,
+                     'total_words_len': 0}
+
+    def __parse_html(self, link):
+        response = url.urlopen(link)
+        soup = BeautifulSoup(response, "lxml")
+        data = soup.findAll(text=True)
+
+        data = list(data)
+        self.line_num = 1
+        for line in data:
+            self.__parse_line(str(line), 'url')
+
+        self.stat['total_lines'] += self.line_num
+
+        if not self.stat['parsed_word_num']:
+            print("%s: nothing to parse" % link)
+
+    def __check_word(self, word):
+        try:
+            word.encode('ascii')
+        except UnicodeEncodeError:
+            return False
+
+        for w in word:
+            if not w.isalpha() and w not in "'-":
+                return False
+        return True
+
+    def __ask_yaspell(self):
+        typos_list = []
+
+        request = self.BASE_URL+'&text='.join(self.word_dict)
+
+        req_len = len(request)
+        if req_len > self.stat['max_fact_req_len']:
+            self.stat['max_fact_req_len'] = req_len
+
+        # request_time = datetime.datetime.now()
+        response = url.urlopen(request)
+        # resp_time = datetime.datetime.now() - request_time
+        # print('\nresponse from Yandex received in %s\n' % resp_time)
+        raw_string = response.read().decode('utf-8')
+        json_data = [x for x in json.loads(raw_string) if x]
+
+        for line in json_data:
+            d = line[0]
+            source = d['word']
+            suggest = ', '.join(d['s'])
+            try:
+                path = self.word_dict[source][0][0]
+                lines = self.word_dict[source][1]
+                typos_list.append([path, lines, source, suggest])
+            except KeyError:
+                print('KeyError occurred: source is "%s"' % source)
+                pass
+
+        for i in sorted(typos_list, key=lambda x: (x[0], x[1])):
+            print('%s : line %s : %s > %s ' % (i[0], i[1], i[2], i[3]))
+
+    def __parse_line(self, line, source):
+        split_line = line.split()
+        for word in split_line:
+            self.stat['total_word_num'] += 1
+            word = word.rstrip('\'"-!?.,`)]>').lstrip('\'`"[(<-')
+
+            if len(word) < self.MIN_WORD_LEN:
+                continue
+
+            if self.__check_word(word) is False:
+                continue
+
+            self.stat['parsed_word_num'] += 1
+            word = word.lower()
+
+            if word not in self.word_dict:
+                self.word_dict[word] = [[source], [self.line_num]]
+                self.stat['word_in_dict'] += 1
+                # +6 symbols for the additional
+                # '&text=' str in request body:
+                self.stat['words_len'] += (len(word) + 6)
+            else:
+                if self.line_num not in self.word_dict[word][1]:
+                    self.word_dict[word][1].append(self.line_num)
+                else:
+                    continue
+
+            if self.stat['words_len'] > self.MAX_REQ_LEN:
+                self.__ask_yaspell()
+                self.word_dict = {}
+                self.stat['total_uniq_words'] += self.stat['word_in_dict']
+                self.stat['word_in_dict'] = 0
+                self.stat['total_words_len'] += self.stat['words_len']
+                self.stat['words_len'] = 0
+                self.stat['total_requests'] += 1
+                self.sent = True
+
+            if self.stat['total_requests'] >= self.MAX_REQ_PER_DAY:
+                print('Max request per day (%s)' % self.MAX_REQ_PER_DAY)
+                break
+
+        if self.word_dict:
+            self.sent = False
+
+        self.line_num += 1
+
+    def __parse_file(self, fname):
+        if is_binary(fname):
+            return False
+
+        fp = open(fname, 'r')
+
+        self.line_num = 1
+
+        for line in fp:
+            self.__parse_line(line, fname)
+
+        self.stat['total_lines'] += self.line_num
+        fp.close()
+
+        if not self.stat['parsed_word_num']:
+            print("%s: nothing to parse" % fname)
+
+    def __finish_parse(self):
+        if not self.sent:
+            self.__ask_yaspell()
+            self.stat['total_requests'] += 1
+            self.stat['total_words_len'] += self.stat['words_len']
+            self.stat['total_uniq_words'] += self.stat['word_in_dict']
+
+    def print_stat(self):
+        exec_time = datetime.datetime.now() - self.start_time
+        print('\nTotal statistics:\n'
+              '----------------\n'
+              'lines: %s\nwords num: %s\n'
+              'parsed words (alph, >%s symb): %s\n'
+              'uniq words: %s\n'
+              'chars request: %s\n'
+              'requests to Yandex: %s\n'
+              'max request len: %s\n'
+              'execution time: %s\n' % (self.stat['total_lines'],
+                                        self.stat['total_word_num'],
+                                        (self.MIN_WORD_LEN - 1),
+                                        self.stat['parsed_word_num'],
+                                        self.stat['total_uniq_words'],
+                                        self.stat['total_words_len'],
+                                        self.stat['total_requests'],
+                                        self.stat['max_fact_req_len'],
+                                        exec_time))
+
+    def parse_file(self, fname):
+        self.__parse_file(fname)
+        self.__finish_parse()
+
+    def parse_dir(self, directory, recursive=False):
+        files = FileList(directory)
+        self.file_list = files.get(recursive)
+
+        for f in self.file_list:
+            self.__parse_file(f)
+
+        self.__finish_parse()
+
+    def parse_html(self, link):
+        self.__parse_html(link)
+        self.__finish_parse()
+
+
+def main():
+    parser = YaSpellParser()
+
+    if args.filename:
+        parser.parse_file(args.filename)
+
+    elif args.directory:
+        parser.parse_dir(args.directory, args.recursive)
+
+    elif args.html:
+        parser.parse_html(args.html)
+
+    if args.print_stat:
+        parser.print_stat()
+
+
+if __name__ == '__main__':
+    main()
