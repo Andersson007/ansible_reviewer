@@ -275,6 +275,15 @@ class YaSpellParser(object):
         if not self.stat['parsed_word_num']:
             print("%s: nothing to parse" % fname)
 
+    def __parse_stdin(self, stdin):
+        for line in stdin:
+            self.__parse_line(line, 'stdin')
+
+        self.stat['total_lines'] += self.line_num
+
+        if not self.stat['parsed_word_num']:
+            print("stdin: nothing to parse")
+
     def __finish_parse(self):
         if not self.sent:
             self.__ask_yaspell()
@@ -319,13 +328,16 @@ class YaSpellParser(object):
         self.__parse_html(link)
         self.__finish_parse()
 
+    def parse_stdin(self, stdin):
+        self.__parse_stdin(stdin)
+        self.__finish_parse()
+
 
 def main():
     parser = YaSpellParser()
 
     if sys.stdin:
-        for line in sys.stdin:
-            print(line)
+        parser.parse_stdin(sys.stdin)
 
     elif args.filename:
         parser.parse_file(args.filename)
