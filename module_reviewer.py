@@ -60,6 +60,10 @@ def get_sections_to_check(module_path):
 
             # Start to extract the return section
             elif 'RETURN' in line:
+                if '#' in line:
+                    returns.append('empty')
+                    continue
+
                 is_in_return_section = True
                 continue
 
@@ -221,6 +225,24 @@ def check_examples_section(examples, report, fqcn=None):
             report.append('examples: #%s no FQCN' % (n + 1))
 
 
+def check_return_section(returns, report):
+    if not returns:
+        report.append('return: no RETURN section, there must be, '
+                      'at least, RETURN = r"""#"""')
+        return
+
+    elif isinstance(returns, list) and returns[0] == 'empty':
+        return
+
+    for key in returns:
+        check_descr(returns[key]['description'], report,
+                    'return %s' % key)
+
+        if not returns[key].get('sample'):
+            report.append('return %s: no sample' % key)
+        
+
+
 def main():
 
     # Check CLI arguments
@@ -238,7 +260,10 @@ def main():
     # Check the examples section
     check_examples_section(examples, report)
 
-    # TODO: Debug
+    # Check the return section
+    check_return_section(returns, report)
+
+    # Print the report
     for line in report:
         print(line)
 
