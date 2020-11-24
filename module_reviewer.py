@@ -248,18 +248,22 @@ def check_return_section(returns, report):
 def check_spelling(data, header_to_print=None):
     data = dump(data)
 
-    p = Popen(['./yasp'], stdin=PIPE, stdout=PIPE)
-    p.stdin.write(data)
+    try:
+        p = Popen(['./yasp'], stdin=PIPE, stdout=PIPE)
+        p.stdin.write(data)
 
-    output = p.communicate()[0]
+        output = p.communicate()[0]
 
-    if output:
-        if header_to_print:
-            print(header_to_print)
+        if output:
+            if header_to_print:
+                print(header_to_print)
 
-        print(output, end='')
-        print('-' * 10)
-    p.stdin.close()
+            print(output, end='')
+            print('-' * 10)
+        p.stdin.close()
+    except Exception as e:
+        print('Cannot communicate with '
+              'Yandes Speller API, skipped: %s' % e)
 
 
 def main():
