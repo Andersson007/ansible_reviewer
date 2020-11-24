@@ -131,7 +131,7 @@ def check_doc_section(doc, report):
         report.append('no "notes" section, it should, at least, contain '
                       'info about check_mode support')
 
-    check_spelling(doc, 'Possible typos in DOCUMENTATION:')
+    check_spelling(dump(doc), 'Possible typos in DOCUMENTATION:')
 
 
 def check_mode_mentioned(str_list, report, d_type):
@@ -227,6 +227,8 @@ def check_examples_section(examples, report, fqcn=None):
         elif '.' not in ex:
             report.append('examples: #%s no FQCN' % (n + 1))
 
+    check_spelling(dump(examples), 'Possible typos in EXAMPLES:')
+
 
 def check_return_section(returns, report):
     if not returns:
@@ -244,10 +246,10 @@ def check_return_section(returns, report):
         if not returns[key].get('sample'):
             report.append('return %s: no sample' % key)
 
+    check_spelling(dump(returns), 'Possible typos in RETURN:')
+
 
 def check_spelling(data, header_to_print=None):
-    data = dump(data)
-
     try:
         p = Popen(['./yasp'], stdin=PIPE, stdout=PIPE)
         p.stdin.write(data)
@@ -259,7 +261,7 @@ def check_spelling(data, header_to_print=None):
                 print(header_to_print)
 
             print(output, end='')
-            print('-' * 10)
+            print('-' * 20)
         p.stdin.close()
     except Exception as e:
         print('Cannot communicate with '
