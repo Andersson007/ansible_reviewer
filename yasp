@@ -341,7 +341,7 @@ class YaSpellParser(object):
 def main():
     parser = YaSpellParser()
 
-    if sys.stdin:
+    if sys.stdin and len(sys.argv) == 1:
         parser.parse_stdin(sys.stdin)
 
     elif args.filename:
