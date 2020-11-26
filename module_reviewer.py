@@ -12,7 +12,7 @@ import sys
 from yaml import load, dump
 
 
-LINE_MAX_LEN = 79
+LINE_MAX_LEN = 100
 
 
 def check_cli_args(arg_list):
@@ -224,8 +224,16 @@ def check_examples_section(examples, report, fqcn=None):
             report.append("examples: #%s there is "
                           "no FQCN %s" % (n + 1, fqcn))
 
-        elif '.' not in ex:
-            report.append('examples: #%s no FQCN' % (n + 1))
+        else:
+            has_fqcn = False
+            for key in ex:
+                if '.' in key:
+                    has_fqcn = True
+
+            if has_fqcn:
+                has_fqcn = False
+            else:
+                report.append('examples: #%s no FQCN' % (n + 1))
 
     check_spelling(dump(examples), 'Possible typos in EXAMPLES:')
 
@@ -240,6 +248,9 @@ def check_return_section(returns, report):
         return
 
     for key in returns:
+        if isinstance(returns[key]['description'], str):
+            returns[key]['description'] = [returns[key]['description'], ]
+
         check_descr(returns[key]['description'], report,
                     'return %s' % key)
 
