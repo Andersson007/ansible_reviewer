@@ -50,17 +50,17 @@ def get_sections_to_check(module_path):
                 continue
 
             # Start to extract the documentation section
-            if 'DOCUMENTATION' in line:
+            if 'DOCUMENTATION =' in line:
                 is_in_doc_section = True
                 continue
 
             # Start to extract the examples section
-            elif 'EXAMPLES' in line:
+            elif 'EXAMPLES =' in line:
                 is_in_examples_section = True
                 continue
 
             # Start to extract the return section
-            elif 'RETURN' in line:
+            elif 'RETURN =' in line:
                 if '#' in line:
                     returns.append('empty')
                     continue
