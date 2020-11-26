@@ -84,7 +84,7 @@ def get_sections_to_check(module_path):
     if examples:
         examples = ''.join(examples)
 
-    if returns:
+    if returns and not returns[0] == 'empty':
         returns = ''.join(returns)
 
     try:
