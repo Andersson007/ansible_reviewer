@@ -12,7 +12,7 @@ import sys
 from yaml import load, dump
 
 
-LINE_MAX_LEN = 100
+LINE_MAX_LEN = 200
 
 
 def check_cli_args(arg_list):
@@ -159,14 +159,15 @@ def check_descr(description, report, d_type):
     # and ends with a dot
     for n, line in enumerate(description):
         # Starts with uppercase?
-        if not line[0].isupper():
+        if not line[0].isupper() and not line[0].isdigit():
             report.append("%s: line %s does not start "
                           "with a capital letter" % (d_type, n + 1))
 
-        # Ends with a dot?
+        # Ends with a proper symbol?
         if line[-1] != '.' and d_type != 'short_description':
-            report.append("%s: line %s does not "
-                          "end with a dot" % (d_type, n + 1))
+            if line[1] != ')':
+                report.append("%s: line %s does not "
+                              "end with a dot" % (d_type, n + 1))
 
         if line[-1] == '.' and d_type == 'short_description':
             report.append("%s: line %s "
