@@ -146,7 +146,8 @@ def check_mode_mentioned(str_list, report, d_type):
 
 def check_doc_options(options, report):
     for opt_name, content in options.items():
-        check_descr(content['description'], report, 'opt %s' % opt_name)
+        if 'description' in content:
+            check_descr(content['description'], report, 'opt %s' % opt_name)
 
         # We do not need to declare "required: false" explicitly
         if 'required' in content and not content['required']:
