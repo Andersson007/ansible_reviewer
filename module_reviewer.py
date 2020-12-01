@@ -148,6 +148,9 @@ def check_doc_options(options, report):
     for opt_name, content in options.items():
         if 'description' in content:
             check_descr(content['description'], report, 'opt %s' % opt_name)
+        else:
+            # In case of plugins
+            report.append('opt %s: no description provided' % opt_name)
 
         # We do not need to declare "required: false" explicitly
         if 'required' in content and not content['required']:
