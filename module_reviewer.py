@@ -115,7 +115,13 @@ def check_doc_section(doc, report):
 
     check_descr([doc['short_description'], ], report, 'short_description')
 
-    check_descr(doc['description'], report, 'description')
+    if 'description' in doc:
+        if isinstance(doc['description'], str):
+            doc['description'] = [doc['description'], ]
+
+        check_descr(doc['description'], report, 'description')
+    else:
+        report.append('no description section')
 
     check_doc_options(doc['options'], report)
 
@@ -159,6 +165,9 @@ def check_doc_options(options, report):
 
 
 def check_descr(description, report, d_type):
+    if isinstance(description, str):
+        description = [description, ]
+
     # Check if every line of description starts with a capital letter
     # and ends with a dot
     for n, line in enumerate(description):
@@ -169,7 +178,7 @@ def check_descr(description, report, d_type):
 
         # Ends with a proper symbol?
         if line[-1] != '.' and d_type != 'short_description':
-            if line[1] != ')':
+            if len(line) >= 2 and line[1] != ')':
                 report.append("%s: line %s does not "
                               "end with a dot" % (d_type, n + 1))
 
