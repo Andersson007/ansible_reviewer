@@ -29,8 +29,7 @@ def get_sections_to_check(module_path):
     documentation = []
     examples = []
     returns = []
-    message_list = []
-    message = []
+    messages = []
 
     is_in_doc_section = False
     is_in_examples_section = False
@@ -52,10 +51,8 @@ def get_sections_to_check(module_path):
 
                 continue
 
-            if is_in_message and ')\n' in line:
-                message.append(line)
-                message_list.append(message)
-                message = []
+            if is_in_message and line[-2:] == ')\n':
+                messages.append(line)
                 is_in_message = False
                 continue
 
@@ -92,7 +89,7 @@ def get_sections_to_check(module_path):
                 returns.append(line)
 
             elif is_in_message:
-                message.append(line)
+                messages.append(line)
 
     if documentation:
         documentation = ''.join(documentation)
@@ -118,14 +115,38 @@ def get_sections_to_check(module_path):
     except AttributeError:
         pass
 
-    message_list = handle_message_list(message_list)
+    messages = handle_messages(messages)
 
-    return documentation, examples, returns, message_list
+    return documentation, examples, returns, messages
 
 
-def handle_message_list(message_list):
+def handle_messages(messages):
 
-    return message_list
+    tmp_list = []
+
+    for elem in messages:
+        if elem == '\n':
+            continue
+
+        elem = elem.rstrip('\n').lstrip(' ')
+
+        if 'module.warn' in elem:
+            elem = extract_module_warn_msg(elem)
+
+        elif 'module.fail_json' in elem:
+            elem = extract_module_fail_msg(elem)
+
+        tmp_list.append(elem)
+
+    return tmp_list
+
+
+def extract_module_warn_msg(elem):
+    return elem
+
+
+def extract_module_fail_msg(elem):
+    return elem
 
 
 def check_doc_section(doc, report):
