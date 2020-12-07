@@ -37,7 +37,7 @@ def get_sections_to_check(module_path):
     is_in_message = False
 
     with open(module_path, 'r') as f:
-        for line in f:
+        for line in enumerate(f):
             # End of thesection has been reached
             if line in ('"""\n', "'''\n"):
                 if is_in_doc_section:
@@ -50,6 +50,13 @@ def get_sections_to_check(module_path):
                     is_in_return_section = False
 
                 continue
+
+            # Check comments
+            if ' # ' in line and not any(is_in_doc_section,
+                                         is_in_examples_section,
+                                         is_in_return_section,
+                                         is_in_message):
+                messages.append(line.split('#')[1].strip())
 
             if is_in_message and line[-2:] == ')\n':
                 messages.append(line)
@@ -154,8 +161,9 @@ def check_doc_section(doc, report):
 
     # If there is no the documentation block, exit
     if not doc:
-        raise AttributeError('"DOCUMENTATION" section is not provided, '
-                             'nothing to parse, exit')
+        print('"DOCUMENTATION" section is not provided, '
+              'nothing to parse, exit')
+        sys.exit(1)
 
     check_descr([doc['short_description'], ], report, 'short_description')
 
