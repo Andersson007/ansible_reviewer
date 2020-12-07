@@ -29,10 +29,13 @@ def get_sections_to_check(module_path):
     documentation = []
     examples = []
     returns = []
+    message_list = []
+    message = []
 
     is_in_doc_section = False
     is_in_examples_section = False
     is_in_return_section = False
+    is_in_message = False
 
     with open(module_path, 'r') as f:
         for line in f:
@@ -47,6 +50,13 @@ def get_sections_to_check(module_path):
                 elif is_in_return_section:
                     is_in_return_section = False
 
+                continue
+
+            if is_in_message and ')\n' in line:
+                message.append(line)
+                message_list.append(message)
+                message = []
+                is_in_message = False
                 continue
 
             # Start to extract the documentation section
@@ -68,6 +78,9 @@ def get_sections_to_check(module_path):
                 is_in_return_section = True
                 continue
 
+            elif 'module.fail_json' in line or 'module.warn' in line:
+                is_in_message = True
+
             # Put the line in an appropriate list
             if is_in_doc_section:
                 documentation.append(line)
@@ -77,6 +90,9 @@ def get_sections_to_check(module_path):
 
             elif is_in_return_section:
                 returns.append(line)
+
+            elif is_in_message:
+                message.append(line)
 
     if documentation:
         documentation = ''.join(documentation)
@@ -102,7 +118,14 @@ def get_sections_to_check(module_path):
     except AttributeError:
         pass
 
-    return documentation, examples, returns
+    message_list = handle_message_list(message_list)
+
+    return documentation, examples, returns, message_list
+
+
+def handle_message_list(message_list):
+
+    return message_list
 
 
 def check_doc_section(doc, report):
@@ -299,13 +322,14 @@ def main():
     check_cli_args(sys.argv)
 
     # Extract sections
-    documentation, examples, returns = get_sections_to_check(sys.argv[1])
+    doc, examples, returns, messages = get_sections_to_check(sys.argv[1])
+    print(messages)
 
     # Create a report object
     report = []
 
     # Check the documentation section
-    check_doc_section(documentation, report)
+    check_doc_section(doc, report)
 
     # Check the examples section
     check_examples_section(examples, report)
