@@ -51,6 +51,15 @@ def get_sections_to_check(module_path):
 
                 continue
 
+            # Extract comments
+            if '# ' in line and not (is_in_doc_section or
+                                     is_in_examples_section or
+                                     is_in_return_section or
+                                     is_in_message):
+                if "Copyright" not in line:
+                    messages.append(line.split('#')[1].strip())
+
+            # Detect end of a message
             if is_in_message and line[-2:] == ')\n':
                 messages.append(line)
                 is_in_message = False
@@ -75,6 +84,7 @@ def get_sections_to_check(module_path):
                 is_in_return_section = True
                 continue
 
+            # Start to extract messages
             elif 'module.fail_json' in line or 'module.warn' in line:
                 is_in_message = True
 
@@ -136,16 +146,38 @@ def handle_messages(messages):
         elif 'module.fail_json' in elem:
             elem = extract_module_fail_msg(elem)
 
+        else:
+            elem = extract_msg(elem)
+
         tmp_list.append(elem)
 
     return tmp_list
 
 
 def extract_module_warn_msg(elem):
+    elem = elem.split('(')[1:]
+    elem = ' '.join(elem).rstrip(')')
+
+    elem = extract_msg(elem)
+
     return elem
 
 
 def extract_module_fail_msg(elem):
+    elem = elem.split('=')[1:]
+    elem = ' '.join(elem).rstrip(')')
+
+    elem = extract_msg(elem)
+
+    return elem
+
+
+def extract_msg(elem):
+    if ' % ' in elem:
+        elem = elem.split(' % ')[:-1]
+        elem = ''.join(elem)
+
+    elem = elem.rstrip(')').strip('"').strip("'")
     return elem
 
 
