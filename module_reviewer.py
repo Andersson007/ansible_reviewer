@@ -181,6 +181,10 @@ def extract_msg(elem):
     return elem
 
 
+def check_comments_and_msgs(msg_list):
+    check_spelling(' '.join(msg_list), 'Possible typos in comments and messages')
+
+
 def check_doc_section(doc, report):
     """Check the documentation section"""
 
@@ -389,6 +393,9 @@ def main():
 
     # Check the return section
     check_return_section(returns, report)
+
+    # Check comments and messages
+    check_comments_and_msgs(messages)
 
     # Print the report
     for line in report:
