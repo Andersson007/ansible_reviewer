@@ -12,9 +12,6 @@ import sys
 from yaml import load, dump
 
 
-LINE_MAX_LEN = 200
-
-
 def check_cli_args(arg_list):
     """Checks CLI arguments"""
     # Maybe later it'll be argparser
@@ -147,6 +144,9 @@ def get_sections_to_check(module_path):
         returns = load(returns)
     except AttributeError:
         pass
+    except Exception as e:
+        print('Cannot parse RETURN section: %s' % e)
+        returns = ['empty']
 
     messages = handle_messages(messages)
 
@@ -154,7 +154,6 @@ def get_sections_to_check(module_path):
 
 
 def handle_messages(messages):
-
     tmp_list = []
 
     for elem in messages:
@@ -204,8 +203,36 @@ def extract_msg(elem):
     return elem
 
 
-def check_comments_and_msgs(msg_list):
-    check_spelling(' '.join(msg_list), 'Possible typos in the file:')
+def check_forbidden_words(line, report, prefix=None):
+    # 'forbidden word': 'alternative'
+    FORBIDDEN_WORDS = {
+        'via': 'by/through',
+        'e.g': 'for example',
+        'etc': 'and so on',
+        'i.e': 'in other words',
+        'vs': 'rather than/against',
+        'versus': 'rather than/against',
+        "it's": 'it is',
+        "ain't": 'corresponding expression',
+        "you're": 'you are',
+        "they're": 'they are',
+        "doesn't": 'does not',
+        "don't": 'do not',
+        "won't": 'will not',
+        "wasn't": 'was not',
+        "weren't": 'were not',
+        "mustn't": 'must not',
+        "should't": 'should not',
+    }
+
+    for key in FORBIDDEN_WORDS:
+        if ' %s' % key in line.lower():
+            if prefix:
+                report.append("%s: abbreviations/latin phrases found '%s', "
+                              "use '%s' instead" % (prefix, key, FORBIDDEN_WORDS[key]))
+            else:
+                report.append("abbreviations/latin phrases found '%s', "
+                              "use '%s' instead" % (key, FORBIDDEN_WORDS[key]))
 
 
 def check_doc_section(doc, report):
@@ -227,7 +254,8 @@ def check_doc_section(doc, report):
     else:
         report.append('no description section')
 
-    check_doc_options(doc['options'], report)
+    if 'options' in doc:
+        check_doc_options(doc['options'], report)
 
     if doc.get('notes'):
         if isinstance(doc['notes'], str):
@@ -269,12 +297,17 @@ def check_doc_options(options, report):
 
 
 def check_descr(description, report, d_type):
+    LINE_MAX_LEN = 200
+
     if isinstance(description, str):
         description = [description, ]
 
     # Check if every line of description starts with a capital letter
     # and ends with a dot
     for n, line in enumerate(description):
+        # Are there latin words and phrases?
+        check_forbidden_words(line, report, prefix=d_type)
+
         # Starts with uppercase?
         if not line[0].isupper() and not line[0].isdigit():
             report.append("%s: line %s does not start "
@@ -291,7 +324,7 @@ def check_descr(description, report, d_type):
                           "ends with a dot" % (d_type, n + 1))
 
         # Uses a marker with http?
-        if needs_marker(line, 'http', 'U'):
+        if needs_marker(line, 'http://', 'U') or needs_marker(line, 'https://', 'U'):
             report.append("%s: has URLs "
                           "used without U() marker" % d_type)
 
@@ -405,7 +438,7 @@ def main():
     # Extract sections
     doc, examples, returns, messages = get_sections_to_check(sys.argv[1])
     # TODO remove this
-    print(messages)
+    # print(messages)
 
     # Create a report object
     report = []
@@ -420,7 +453,9 @@ def main():
     check_return_section(returns, report)
 
     # Check comments and messages
-    check_comments_and_msgs(messages)
+    messages = ' '.join(messages)
+    check_spelling(messages, 'Possible typos in the file:')
+    check_forbidden_words(messages, report)
 
     # Print the report
     for line in report:
