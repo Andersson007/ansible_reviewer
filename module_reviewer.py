@@ -35,6 +35,8 @@ def get_sections_to_check(module_path):
     is_in_examples_section = False
     is_in_return_section = False
     is_in_message = False
+    is_in_method = False
+    end_of_method_def = False
 
     with open(module_path, 'r') as f:
         for line in f:
@@ -58,6 +60,27 @@ def get_sections_to_check(module_path):
                                      is_in_message):
                 if "Copyright" not in line:
                     messages.append(line.split('#')[1].strip())
+
+            # Extract class / function comments
+            if ("def " in line or "class " in line):
+                if not (is_in_doc_section or
+                        is_in_examples_section or
+                        is_in_return_section or
+                        is_in_message):
+                    is_in_method = True
+
+            if is_in_method and line[-2:] == ':\n':
+                end_of_method_def = True
+
+            if is_in_method and end_of_method_def:
+                if ' """' in line or " '''" in line:
+                    messages.append(line)
+
+                if '"""\n' in line or "'''\n" in line:
+                    is_in_method = False
+                    end_of_method_def = False
+                    continue
+            # End of extracting function comments
 
             # Detect end of a message
             if is_in_message and line[-2:] == ')\n':
@@ -182,7 +205,7 @@ def extract_msg(elem):
 
 
 def check_comments_and_msgs(msg_list):
-    check_spelling(' '.join(msg_list), 'Possible typos in comments and messages')
+    check_spelling(' '.join(msg_list), 'Possible typos in the file:')
 
 
 def check_doc_section(doc, report):
