@@ -37,7 +37,7 @@ def get_sections_to_check(module_path):
     is_in_message = False
 
     with open(module_path, 'r') as f:
-        for line in enumerate(f):
+        for line in f:
             # End of thesection has been reached
             if line in ('"""\n', "'''\n"):
                 if is_in_doc_section:
@@ -381,6 +381,7 @@ def main():
 
     # Extract sections
     doc, examples, returns, messages = get_sections_to_check(sys.argv[1])
+    # TODO remove this
     print(messages)
 
     # Create a report object
