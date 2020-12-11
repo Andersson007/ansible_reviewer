@@ -351,7 +351,7 @@ def needs_marker(string, pattern, marker):
             return True
 
         marker_check_pos = pattern_start_pos - 2
-        if string[marker_check_pos] != marker:
+        if string[marker_check_pos] != marker and 'L(' not in string:
             return True
 
     return False
