@@ -223,6 +223,8 @@ def check_forbidden_words(line, report, prefix=None):
         "weren't": 'were not',
         "mustn't": 'must not',
         "should't": 'should not',
+        "can't": 'cannot"',
+        "couldn't": 'could not',
     }
 
     for key in FORBIDDEN_WORDS:
@@ -315,7 +317,7 @@ def check_descr(description, report, d_type):
 
         # Ends with a proper symbol?
         if line[-1] != '.' and d_type != 'short_description':
-            if len(line) >= 2 and line[1] != ')':
+            if len(line) >= 2 and line[-1] not in ('.', '!'):
                 report.append("%s: line %s does not "
                               "end with a dot" % (d_type, n + 1))
 
@@ -378,7 +380,7 @@ def check_examples_section(examples, report, fqcn=None):
         else:
             has_fqcn = False
             for key in ex:
-                if '.' in key:
+                if '.' in key or key == 'assert':
                     has_fqcn = True
 
             if has_fqcn:
