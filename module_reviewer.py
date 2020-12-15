@@ -51,12 +51,12 @@ def get_sections_to_check(module_path):
                 continue
 
             # Extract comments
-            if '# ' in line and not (is_in_doc_section or
-                                     is_in_examples_section or
-                                     is_in_return_section or
-                                     is_in_message):
-                if "Copyright" not in line:
-                    messages.append(line.split('#')[1].strip())
+            # if '# ' in line and not (is_in_doc_section or
+            #                          is_in_examples_section or
+            #                          is_in_return_section or
+            #                          is_in_message):
+            #     if "Copyright" not in line:
+            #         messages.append(line.split('#')[1].strip())
 
             # Extract class / function comments
             if ("def " in line or "class " in line):
