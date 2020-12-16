@@ -47,7 +47,7 @@ def get_cli_args():
 
 
 def get_sections_to_check(module_path, check_comments):
-    """Read a module file and extracts section to check"""
+    """Reads a module file and extracts section to check"""
     documentation = []
     examples = []
     returns = []
