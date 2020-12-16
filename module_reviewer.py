@@ -256,6 +256,8 @@ def check_forbidden_words(line, report, prefix=None):
         "should't": 'should not',
         "can't": 'cannot"',
         "couldn't": 'could not',
+        "mightn't": 'might not',
+        "wouldn't": 'would not',
     }
 
     for key in FORBIDDEN_WORDS:
