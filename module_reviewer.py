@@ -5,22 +5,47 @@
 
 from __future__ import absolute_import, division, print_function
 
-from subprocess import Popen, PIPE
-
 import sys
+
+from argparse import ArgumentParser
+from subprocess import Popen, PIPE
 
 from yaml import load, dump
 
 
-def check_cli_args(arg_list):
-    """Checks CLI arguments"""
-    # Maybe later it'll be argparser
-    # but this primitive check is enough for a while
-    if len(sys.argv) < 2:
-        raise Exception('At least one argument (file name) is required. Exit')
+def get_cli_args():
+    parser = ArgumentParser(description='Check modules formatting')
+
+    parser.add_argument('-f', '--file',
+                        dest='filepath',
+                        metavar='FILE',
+                        default=False,
+                        required=True,
+                        help='path to a FILE to check')
+
+    parser.add_argument('-n', '--fqcn',
+                        dest='fqcn',
+                        metavar='FQCN',
+                        default=False,
+                        required=False,
+                        help='FQCN to check examples')
+
+    parser.add_argument("-c", "--comments",
+                        dest="check_comments",
+                        action="store_true",
+                        required=False,
+                        help="check comments")
+
+    parser.add_argument("-l", "--length",
+                        dest="check_length",
+                        action="store_true",
+                        required=False,
+                        help="check description length")
+
+    return parser.parse_args()
 
 
-def get_sections_to_check(module_path):
+def get_sections_to_check(module_path, check_comments):
     """Read a module file and extracts section to check"""
 
     documentation = []
@@ -51,12 +76,13 @@ def get_sections_to_check(module_path):
                 continue
 
             # Extract comments
-            # if '# ' in line and not (is_in_doc_section or
-            #                          is_in_examples_section or
-            #                          is_in_return_section or
-            #                          is_in_message):
-            #     if "Copyright" not in line:
-            #         messages.append(line.split('#')[1].strip())
+            if check_comments:
+                if '# ' in line and not (is_in_doc_section or
+                                         is_in_examples_section or
+                                         is_in_return_section or
+                                         is_in_message):
+                    if "Copyright" not in line:
+                        messages.append(line.split('#')[1].strip())
 
             # Extract class / function comments
             if ("def " in line or "class " in line):
@@ -237,7 +263,7 @@ def check_forbidden_words(line, report, prefix=None):
                               "use '%s' instead" % (key, FORBIDDEN_WORDS[key]))
 
 
-def check_doc_section(doc, report):
+def check_doc_section(doc, report, check_length):
     """Check the documentation section"""
 
     # If there is no the documentation block, exit
@@ -246,24 +272,26 @@ def check_doc_section(doc, report):
               'nothing to parse, exit')
         sys.exit(1)
 
-    check_descr([doc['short_description'], ], report, 'short_description')
+    check_descr([doc['short_description'], ], report,
+                'short_description', check_length)
 
     if 'description' in doc:
         if isinstance(doc['description'], str):
             doc['description'] = [doc['description'], ]
 
-        check_descr(doc['description'], report, 'description')
+        check_descr(doc['description'], report,
+                    'description', check_length)
     else:
         report.append('no description section')
 
     if 'options' in doc:
-        check_doc_options(doc['options'], report)
+        check_doc_options(doc['options'], report, check_length)
 
     if doc.get('notes'):
         if isinstance(doc['notes'], str):
             doc['notes'] = [doc['notes'], ]
 
-        check_descr(doc['notes'], report, 'notes')
+        check_descr(doc['notes'], report, 'notes', check_length)
 
         check_mode_mentioned(doc['notes'], report, 'notes')
 
@@ -284,10 +312,11 @@ def check_mode_mentioned(str_list, report, d_type):
         report.append('%s: check_mode support is not mentioned' % d_type)
 
 
-def check_doc_options(options, report):
+def check_doc_options(options, report, check_length):
     for opt_name, content in options.items():
         if 'description' in content:
-            check_descr(content['description'], report, 'opt %s' % opt_name)
+            check_descr(content['description'], report,
+                        'opt %s' % opt_name, check_length)
         else:
             # In case of plugins
             report.append('opt %s: no description provided' % opt_name)
@@ -298,7 +327,7 @@ def check_doc_options(options, report):
                           'declaration' % opt_name)
 
 
-def check_descr(description, report, d_type):
+def check_descr(description, report, d_type, check_length):
     LINE_MAX_LEN = 200
 
     if isinstance(description, str):
@@ -331,10 +360,11 @@ def check_descr(description, report, d_type):
                           "used without U() marker" % d_type)
 
         # Check length
-        line_len = len(line)
-        if line_len > LINE_MAX_LEN:
-            report.append("%s: line %s contains %s characters which seems "
-                          "to be too long" % (d_type, n, line_len))
+        if check_length:
+            line_len = len(line)
+            if line_len > LINE_MAX_LEN:
+                report.append("%s: line %s contains %s characters which seems "
+                              "to be too long" % (d_type, n, line_len))
 
 
 def needs_marker(string, pattern, marker):
@@ -360,6 +390,8 @@ def needs_marker(string, pattern, marker):
 
 
 def check_examples_section(examples, report, fqcn=None):
+    has_provided_fqcn = False
+
     for n, ex in enumerate(examples):
         if 'name' not in ex:
             report.append('examples: #%s without using "name"' % (n + 1))
@@ -373,25 +405,31 @@ def check_examples_section(examples, report, fqcn=None):
                 report.append('examples: "- name" of #%s '
                               'ends with a dot' % (n + 1))
 
-        if fqcn and fqcn not in ex:
-            report.append("examples: #%s there is "
-                          "no FQCN %s" % (n + 1, fqcn))
+        # FQCN check
+        has_fqcn = False
 
-        else:
+        for key in ex:
+            if '.' in key or key == 'assert':
+                has_fqcn = True
+
+            if fqcn and fqcn in key:
+                has_provided_fqcn = True
+
+        if has_fqcn:
             has_fqcn = False
-            for key in ex:
-                if '.' in key or key == 'assert':
-                    has_fqcn = True
+        else:
+            report.append('examples: #%s no FQCN' % (n + 1))
 
-            if has_fqcn:
-                has_fqcn = False
-            else:
-                report.append('examples: #%s no FQCN' % (n + 1))
+    # When we have not found a provided FQCN
+    # in the EXAMPLES section
+    if fqcn and not has_provided_fqcn:
+        report.append("examples: there is no example "
+                      "containing provided FQCN %s" % fqcn)
 
     check_spelling(dump(examples), 'Possible typos in EXAMPLES:')
 
 
-def check_return_section(returns, report):
+def check_return_section(returns, report, check_length):
     if not returns:
         report.append('return: no RETURN section, there must be, '
                       'at least, RETURN = r"""#"""')
@@ -405,7 +443,7 @@ def check_return_section(returns, report):
             returns[key]['description'] = [returns[key]['description'], ]
 
         check_descr(returns[key]['description'], report,
-                    'return %s' % key)
+                    'return %s' % key, check_length)
 
         if not returns[key].get('sample'):
             report.append('return %s: no sample' % key)
@@ -434,25 +472,24 @@ def check_spelling(data, header_to_print=None):
 
 def main():
 
-    # Check CLI arguments
-    check_cli_args(sys.argv)
+    # Parse CLI arguments
+    args = get_cli_args()
 
     # Extract sections
-    doc, examples, returns, messages = get_sections_to_check(sys.argv[1])
-    # TODO remove this
-    # print(messages)
+    doc, examples, returns, messages = get_sections_to_check(args.filepath,
+                                                             args.check_comments)
 
     # Create a report object
     report = []
 
     # Check the documentation section
-    check_doc_section(doc, report)
+    check_doc_section(doc, report, args.check_length)
 
     # Check the examples section
-    check_examples_section(examples, report)
+    check_examples_section(examples, report, args.fqcn)
 
     # Check the return section
-    check_return_section(returns, report)
+    check_return_section(returns, report, args.check_length)
 
     # Check comments and messages
     messages = ' '.join(messages)
