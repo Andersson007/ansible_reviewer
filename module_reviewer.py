@@ -14,6 +14,7 @@ from yaml import load, dump
 
 
 def get_cli_args():
+    """Gets, parses, and returns CLI arguments"""
     parser = ArgumentParser(description='Check modules formatting')
 
     parser.add_argument('-f', '--file',
@@ -47,7 +48,6 @@ def get_cli_args():
 
 def get_sections_to_check(module_path, check_comments):
     """Read a module file and extracts section to check"""
-
     documentation = []
     examples = []
     returns = []
@@ -75,7 +75,7 @@ def get_sections_to_check(module_path, check_comments):
 
                 continue
 
-            # Extract comments
+            # Extract comments if needed
             if check_comments:
                 if '# ' in line and not (is_in_doc_section or
                                          is_in_examples_section or
@@ -174,12 +174,13 @@ def get_sections_to_check(module_path, check_comments):
         print('Cannot parse RETURN section: %s' % e)
         returns = ['empty']
 
-    messages = handle_messages(messages)
+    messages = extract_messages(messages)
 
     return documentation, examples, returns, messages
 
 
-def handle_messages(messages):
+def extract_messages(messages):
+    """Extracts and returns messages"""
     tmp_list = []
 
     for elem in messages:
@@ -203,6 +204,7 @@ def handle_messages(messages):
 
 
 def extract_module_warn_msg(elem):
+    """Extracts a message from module.warn() method invocation"""
     elem = elem.split('(')[1:]
     elem = ' '.join(elem).rstrip(')')
 
@@ -212,6 +214,7 @@ def extract_module_warn_msg(elem):
 
 
 def extract_module_fail_msg(elem):
+    """Extracts a message from module.fail_json() method invocation"""
     elem = elem.split('=')[1:]
     elem = ' '.join(elem).rstrip(')')
 
@@ -221,6 +224,7 @@ def extract_module_fail_msg(elem):
 
 
 def extract_msg(elem):
+    """Extracts a message"""
     if ' % ' in elem:
         elem = elem.split(' % ')[:-1]
         elem = ''.join(elem)
@@ -230,6 +234,7 @@ def extract_msg(elem):
 
 
 def check_forbidden_words(line, report, prefix=None):
+    """Searches for forbidden expressions"""
     # 'forbidden word': 'alternative'
     FORBIDDEN_WORDS = {
         'via': 'by/through',
@@ -264,8 +269,7 @@ def check_forbidden_words(line, report, prefix=None):
 
 
 def check_doc_section(doc, report, check_length):
-    """Check the documentation section"""
-
+    """Checks the documentation section"""
     # If there is no the documentation block, exit
     if not doc:
         print('"DOCUMENTATION" section is not provided, '
@@ -303,6 +307,7 @@ def check_doc_section(doc, report, check_length):
 
 
 def check_mode_mentioned(str_list, report, d_type):
+    """Checks if the check mode support is mentioned"""
     mentioned = False
     for line in str_list:
         if 'check_mode' in line.lower() or 'check mode' in line.lower():
@@ -313,6 +318,7 @@ def check_mode_mentioned(str_list, report, d_type):
 
 
 def check_doc_options(options, report, check_length):
+    """Checks module options"""
     for opt_name, content in options.items():
         if 'description' in content:
             check_descr(content['description'], report,
@@ -328,6 +334,7 @@ def check_doc_options(options, report, check_length):
 
 
 def check_descr(description, report, d_type, check_length):
+    """Checks option / return value descriptions"""
     LINE_MAX_LEN = 200
 
     if isinstance(description, str):
@@ -375,7 +382,6 @@ def needs_marker(string, pattern, marker):
       pattern (str) - pattern to search for
       marker (str) - marker to be followed by pattern, can be U, C, M, etc.
     """
-
     pattern_start_pos = string.find(pattern)
 
     if pattern_start_pos != -1:
@@ -390,6 +396,7 @@ def needs_marker(string, pattern, marker):
 
 
 def check_examples_section(examples, report, fqcn=None):
+    """Checks the examples section"""
     has_provided_fqcn = False
 
     for n, ex in enumerate(examples):
@@ -430,6 +437,7 @@ def check_examples_section(examples, report, fqcn=None):
 
 
 def check_return_section(returns, report, check_length):
+    """Checks the return section"""
     if not returns:
         report.append('return: no RETURN section, there must be, '
                       'at least, RETURN = r"""#"""')
@@ -452,6 +460,7 @@ def check_return_section(returns, report, check_length):
 
 
 def check_spelling(data, header_to_print=None):
+    """Checks spelling via Yandex.Speller API"""
     try:
         p = Popen(['./yasp'], stdin=PIPE, stdout=PIPE)
         p.stdin.write(data)
@@ -464,14 +473,15 @@ def check_spelling(data, header_to_print=None):
 
             print(output, end='')
             print('-' * 20)
+
         p.stdin.close()
+
     except Exception as e:
         print('Cannot communicate with '
               'Yandes Speller API, skipped: %s' % e)
 
 
 def main():
-
     # Parse CLI arguments
     args = get_cli_args()
 
