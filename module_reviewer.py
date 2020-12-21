@@ -261,7 +261,7 @@ def check_forbidden_words(line, report, prefix=None):
     }
 
     for key in FORBIDDEN_WORDS:
-        if ' %s' % key in line.lower():
+        if key in line.lower():
             if prefix:
                 report.append("%s: abbreviations/latin phrases found '%s', "
                               "use '%s' instead" % (prefix, key, FORBIDDEN_WORDS[key]))
