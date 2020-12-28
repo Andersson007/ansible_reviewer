@@ -17,12 +17,7 @@ def get_cli_args():
     """Gets, parses, and returns CLI arguments"""
     parser = ArgumentParser(description='Check modules formatting')
 
-    parser.add_argument('-f', '--file',
-                        dest='filepath',
-                        metavar='FILE',
-                        default=False,
-                        required=True,
-                        help='path to a FILE to check')
+    parser.add_argument('filepath', help='path to a file to check')
 
     parser.add_argument('-n', '--fqcn',
                         dest='fqcn',
