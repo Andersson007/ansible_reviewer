@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # Copyright: 2020 Andrew Klychkov (@Andersson007) <aaklychkov@mail.ru>
 # MIT License
@@ -10,7 +10,7 @@ import sys
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE
 
-from yaml import load, dump
+from yaml import safe_load, dump
 
 
 def get_cli_args():
@@ -37,6 +37,12 @@ def get_cli_args():
                         action="store_true",
                         required=False,
                         help="check description length")
+
+    parser.add_argument("-s", "--spelling",
+                        dest="check_spelling",
+                        action="store_true",
+                        required=False,
+                        help="check spelling")
 
     return parser.parse_args()
 
@@ -152,17 +158,17 @@ def get_sections_to_check(module_path, check_comments):
         returns = ''.join(returns)
 
     try:
-        documentation = load(documentation)
+        documentation = safe_load(documentation)
     except AttributeError:
         pass
 
     try:
-        examples = load(examples)
+        examples = safe_load(examples)
     except AttributeError:
         pass
 
     try:
-        returns = load(returns)
+        returns = safe_load(returns)
     except AttributeError:
         pass
     except Exception as e:
@@ -270,7 +276,7 @@ def check_forbidden_words(line, report, prefix=None):
                               "use '%s' instead" % (key, FORBIDDEN_WORDS[key]))
 
 
-def check_doc_section(doc, report, check_length):
+def check_doc_section(doc, report, check_length, spelling):
     """Checks the documentation section"""
     # If there is no the documentation block, exit
     if not doc:
@@ -305,7 +311,8 @@ def check_doc_section(doc, report, check_length):
         report.append('no "notes" section, it should, at least, contain '
                       'info about check_mode support')
 
-    check_spelling(dump(doc), 'Possible typos in DOCUMENTATION:')
+    if spelling:
+        check_spelling(dump(doc), 'Possible typos in DOCUMENTATION:')
 
 
 def check_mode_mentioned(str_list, report, d_type):
@@ -397,7 +404,7 @@ def needs_marker(string, pattern, marker):
     return False
 
 
-def check_examples_section(examples, report, fqcn=None):
+def check_examples_section(examples, report, fqcn=None, spelling=None):
     """Checks the examples section"""
     has_provided_fqcn = False
 
@@ -435,10 +442,11 @@ def check_examples_section(examples, report, fqcn=None):
         report.append("examples: there is no example "
                       "containing provided FQCN %s" % fqcn)
 
-    check_spelling(dump(examples), 'Possible typos in EXAMPLES:')
+    if spelling:
+        check_spelling(dump(examples), 'Possible typos in EXAMPLES:')
 
 
-def check_return_section(returns, report, check_length):
+def check_return_section(returns, report, check_length, spelling):
     """Checks the return section"""
     if not returns:
         report.append('return: no RETURN section, there must be, '
@@ -458,7 +466,8 @@ def check_return_section(returns, report, check_length):
         if not returns[key].get('sample'):
             report.append('return %s: no sample' % key)
 
-    check_spelling(dump(returns), 'Possible typos in RETURN:')
+    if spelling:
+        check_spelling(dump(returns), 'Possible typos in RETURN:')
 
 
 def check_spelling(data, header_to_print=None):
@@ -495,17 +504,20 @@ def main():
     report = []
 
     # Check the documentation section
-    check_doc_section(doc, report, args.check_length)
+    check_doc_section(doc, report, args.check_length, args.check_spelling)
 
     # Check the examples section
-    check_examples_section(examples, report, args.fqcn)
+    check_examples_section(examples, report, args.fqcn, args.check_spelling)
 
     # Check the return section
-    check_return_section(returns, report, args.check_length)
+    check_return_section(returns, report, args.check_length, args.check_spelling)
 
     # Check comments and messages
     messages = ' '.join(messages)
-    check_spelling(messages, 'Possible typos in the file:')
+
+    if args.check_spelling:
+        check_spelling(messages, 'Possible typos in the file:')
+
     check_forbidden_words(messages, report)
 
     # Print the report
