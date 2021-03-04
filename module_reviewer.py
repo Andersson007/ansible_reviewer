@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: 2020 Andrew Klychkov (@Andersson007) <aaklychkov@mail.ru>
 # MIT License
@@ -473,7 +473,7 @@ def check_return_section(returns, report, check_length, spelling):
 def check_spelling(data, header_to_print=None):
     """Checks spelling via Yandex.Speller API"""
     try:
-        p = Popen(['./yasp'], stdin=PIPE, stdout=PIPE)
+        p = Popen(['./yasp'], stdin=PIPE, stdout=PIPE, encoding='UTF-8')
         p.stdin.write(data)
 
         output = p.communicate()[0]
