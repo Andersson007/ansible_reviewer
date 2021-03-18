@@ -408,6 +408,10 @@ def check_examples_section(examples, report, fqcn=None, spelling=None):
     """Checks the examples section"""
     has_provided_fqcn = False
 
+    if not examples:
+        report.append('EXAMPLES section is empty or fully commented')
+        return
+
     for n, ex in enumerate(examples):
         if 'name' not in ex:
             report.append('examples: #%s without using "name"' % (n + 1))
