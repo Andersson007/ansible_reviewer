@@ -337,9 +337,9 @@ def check_doc_options(options, report, check_length):
             report.append('opt %s: no description provided' % opt_name)
 
         # We do not need to declare "required: false" explicitly
-        if 'required' in content and not content['required']:
-            report.append('opt %s: explicit "require: false" '
-                          'declaration' % opt_name)
+        # if 'required' in content and not content['required']:
+        #     report.append('opt %s: explicit "require: false" '
+        #                   'declaration' % opt_name)
 
 
 def check_descr(description, report, d_type, check_length):
