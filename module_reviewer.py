@@ -192,14 +192,34 @@ def extract_messages(messages):
 
         if 'module.warn' in elem:
             elem = extract_module_warn_msg(elem)
-
         elif 'module.fail_json' in elem:
             elem = extract_module_fail_msg(elem)
-
-        else:
+        elif '"""' in elem or ' """ ' in elem:
             elem = extract_msg(elem)
+        elif '\'\'\'' in elem or ' \'\'\' ' in elem:
+            elem = extract_msg(elem)
+        elif '#' in elem or ' # ' in elem:
+            elem = extract_msg(elem)
+        elif 'LOG.info' in elem:
+            elem = extract_msg(elem)
+        elif 'LOG.debug' in elem:
+            elem = extract_msg(elem)
+        elif 'LOG.error' in elem:
+            elem = extract_msg(elem)
+        elif ':param' in elem:
+            elem = extract_msg(elem)
+        elif ':type' in elem:
+            elem = extract_msg(elem)
+        elif ':return' in elem:
+            elem = extract_msg(elem)
+        elif ':rtype' in elem:
+            elem = extract_msg(elem)
+        else:
+            not_needed_list.append(elem)
+            elem = " "
 
-        tmp_list.append(elem)
+        if len(elem.strip()) != 0:
+            tmp_list.append(elem)
 
     return tmp_list
 
@@ -239,12 +259,12 @@ def check_forbidden_words(line, report, prefix=None):
     # 'forbidden word': 'alternative'
     FORBIDDEN_WORDS = {
         'via ': 'by/through',
-        'e.g': 'for example',
+        'e.g.': 'for example',
         'etc.': 'and so on',
         'etc,': 'and so on',
         'etc)': 'and so on',
         'etc\n': 'and so on',
-        'i.e': 'in other words',
+        'i.e.': 'in other words',
         ' vs ': 'rather than/against',
         'vs ': 'rather than/against',
         ' vs)': 'rather than/against',
