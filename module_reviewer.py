@@ -239,12 +239,12 @@ def check_forbidden_words(line, report, prefix=None):
     # 'forbidden word': 'alternative'
     FORBIDDEN_WORDS = {
         'via ': 'by/through',
-        'e.g': 'for example',
+        'e.g.': 'for example',
         'etc.': 'and so on',
         'etc,': 'and so on',
         'etc)': 'and so on',
         'etc\n': 'and so on',
-        'i.e': 'in other words',
+        'i.e.': 'in other words',
         ' vs ': 'rather than/against',
         'vs ': 'rather than/against',
         ' vs)': 'rather than/against',
